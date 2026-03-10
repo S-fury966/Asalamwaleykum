@@ -1,0 +1,6 @@
+transformers
+torch
+sentence-transformers
+matplotlib
+seaborn
+accelerate
