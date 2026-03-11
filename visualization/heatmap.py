@@ -1,20 +1,17 @@
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-def plot_heatmap(scores, labels):
 
-    matrix = [[s] for s in scores]
+def plot_heatmap(matrix):
 
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(8,6))
 
-    sns.heatmap(
-        matrix,
-        annot=True,
-        cmap="coolwarm",
-        yticklabels=labels,
-        xticklabels=["Stability"]
-    )
+    sns.heatmap(matrix, cmap="coolwarm")
 
-    plt.title("LLM Stability Heatmap")
+    plt.title("LLM Response Similarity Heatmap")
+
+    plt.xlabel("Responses")
+
+    plt.ylabel("Responses")
 
     plt.show()

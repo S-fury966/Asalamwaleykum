@@ -1,28 +1,13 @@
-logical_flips = {
-
-"always":"never",
-"never":"always",
-"secure":"insecure",
-"safe":"unsafe",
-"is":"is not",
-"are":"are not"
-
-}
-
 def logical_flip(prompt):
 
-    words = prompt.split()
+    prompts = [
 
-    new_words = []
+        "Explain why " + prompt + " might be misunderstood",
 
-    for w in words:
+        "Explain the opposite view of " + prompt,
 
-        if w.lower() in logical_flips:
+        "Explain common misconceptions about " + prompt
 
-            new_words.append(logical_flips[w.lower()])
+    ]
 
-        else:
-
-            new_words.append(w)
-
-    return " ".join(new_words)
+    return prompts

@@ -1,6 +1,9 @@
 transformers
 torch
 sentence-transformers
+networkx
+node2vec
+scikit-learn
+numpy
 matplotlib
 seaborn
-accelerate

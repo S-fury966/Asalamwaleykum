@@ -1,11 +1,15 @@
-from models.paraphraser import tokenizer, model
+def structural(prompt):
 
-def structural_variation(text):
+    prompts = [
 
-    instruction = "Rewrite this question using a very different structure but same meaning: "
+        prompt + " briefly",
 
-    inputs = tokenizer(instruction + text, return_tensors="pt")
+        "Give a short explanation of " + prompt,
 
-    out = model.generate(**inputs, max_length=64)
+        "Explain " + prompt + " step by step",
 
-    return tokenizer.decode(out[0], skip_special_tokens=True)
+        "Explain " + prompt + " in simple terms"
+
+    ]
+
+    return prompts

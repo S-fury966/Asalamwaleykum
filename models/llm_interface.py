@@ -1,41 +1,52 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-# TinyLlama model
-model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
-# Load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(model_name)
+class LLMInterface:
 
-# Load model
-model = AutoModelForCausalLM.from_pretrained(
-    model_name,
-    torch_dtype=torch.float32,
-    device_map="auto"
-)
+    def __init__(self):
 
+        model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 
-def get_response(prompt):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # Chat formatting used by TinyLlama
-    formatted_prompt = f"<|user|>\n{prompt}\n<|assistant|>"
+        print(f"Loading model on {self.device}...")
 
-    inputs = tokenizer(
-        formatted_prompt,
-        return_tensors="pt"
-    ).to(model.device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=150,
-        temperature=0.7,
-        top_p=0.9,
-        do_sample=True
-    )
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.float16 if self.device == "cuda" else torch.float32,
+            device_map="auto"
+        )
 
-    response = tokenizer.decode(
-        outputs[0],
-        skip_special_tokens=True
-    )
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
-    return response
+    def generate(self, prompt, n=3):
+
+        # Batch prompts for faster GPU generation
+        prompts = [prompt] * n
+
+        inputs = self.tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True
+        ).to(self.device)
+
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=80,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.9,
+            pad_token_id=self.tokenizer.eos_token_id
+        )
+
+        responses = self.tokenizer.batch_decode(
+            outputs,
+            skip_special_tokens=True
+        )
+
+        return responses
