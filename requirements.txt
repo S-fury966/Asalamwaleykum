@@ -1,9 +1,20 @@
-transformers
+# Core ML libraries
 torch
+transformers
 sentence-transformers
-networkx
-node2vec
 scikit-learn
 numpy
+
+# Graph analysis
+networkx
+
+# Visualization
 matplotlib
 seaborn
+
+# External knowledge verification
+wikipedia
+
+# Utilities (commonly required by transformers)
+tqdm
+requests
