@@ -12,11 +12,12 @@ from analysis.confidence_estimator import ConfidenceEstimator
 from analysis.stability_analyzer import StabilityAnalyzer
 
 from visualization.heatmap import plot_heatmap
+from visualization.stability_map import StabilityMap
 
 
-# -------------------------------------------------
-# Helper function to interpret metric performance
-# -------------------------------------------------
+# ----------------------------
+# performance interpretation
+# ----------------------------
 def interpret_score(score):
 
     if score >= 0.8:
@@ -32,9 +33,6 @@ def interpret_score(score):
         return "Poor"
 
 
-# -------------------------------------------------
-# Special interpretation for hallucination risk
-# -------------------------------------------------
 def interpret_hallucination(score):
 
     if score == 0:
@@ -52,9 +50,6 @@ def interpret_hallucination(score):
 
 def main():
 
-    # -------------------------------------------------
-    # Original Prompt
-    # -------------------------------------------------
     prompt = "Explain blockchain technology"
 
     print("\n==============================")
@@ -62,9 +57,10 @@ def main():
     print(prompt)
     print("==============================\n")
 
-    # -------------------------------------------------
+    # --------------------------------
     # Prompt Perturbation
-    # -------------------------------------------------
+    # --------------------------------
+
     prompts = []
 
     prompts.extend(paraphrase(prompt))
@@ -81,11 +77,10 @@ def main():
     for i, p in enumerate(prompts):
         print(f"{i+1}. {p}")
 
-    print("\nTotal perturbed prompts:", len(prompts))
-
-    # -------------------------------------------------
+    # --------------------------------
     # LLM Generation
-    # -------------------------------------------------
+    # --------------------------------
+
     llm = LLMInterface()
 
     responses = []
@@ -105,11 +100,10 @@ def main():
         print(r)
         print()
 
-    print("Total generated responses:", len(responses))
+    # --------------------------------
+    # Similarity
+    # --------------------------------
 
-    # -------------------------------------------------
-    # Embedding + Similarity
-    # -------------------------------------------------
     similarity_model = SimilarityModel()
 
     embeddings = similarity_model.embed(responses)
@@ -118,25 +112,28 @@ def main():
         embeddings
     )
 
-    # -------------------------------------------------
+    # --------------------------------
     # Graph Stability
-    # -------------------------------------------------
+    # --------------------------------
+
     graph_analyzer = GraphAnalyzer()
 
     graph = graph_analyzer.build_graph(prompt, responses)
 
     graph_score = graph_analyzer.graph_stability(graph)
 
-    # -------------------------------------------------
+    # --------------------------------
     # Hallucination Detection
-    # -------------------------------------------------
+    # --------------------------------
+
     hallucination_detector = HallucinationDetector()
 
     hallucination_risk = hallucination_detector.detect(responses)
 
-    # -------------------------------------------------
-    # Confidence Estimation
-    # -------------------------------------------------
+    # --------------------------------
+    # Confidence
+    # --------------------------------
+
     confidence_estimator = ConfidenceEstimator()
 
     confidence_score = confidence_estimator.compute(
@@ -145,9 +142,10 @@ def main():
         hallucination_risk
     )
 
-    # -------------------------------------------------
+    # --------------------------------
     # Final Stability Score
-    # -------------------------------------------------
+    # --------------------------------
+
     stability_analyzer = StabilityAnalyzer()
 
     final_score = stability_analyzer.final_score(
@@ -156,9 +154,10 @@ def main():
         hallucination_risk
     )
 
-    # -------------------------------------------------
-    # Print Results
-    # -------------------------------------------------
+    # --------------------------------
+    # Performance Report
+    # --------------------------------
+
     print("\n==============================")
     print("MODEL PERFORMANCE REPORT")
     print("==============================\n")
@@ -178,12 +177,35 @@ def main():
     print("Final Stability Score:", round(final_score, 3))
     print("Overall Model Stability:", interpret_score(final_score))
 
-    # -------------------------------------------------
-    # Visualization
-    # -------------------------------------------------
+    # --------------------------------
+    # Prompt Stability Scores
+    # --------------------------------
+
+    prompt_scores = []
+
+    for p in prompts:
+
+        emb_prompt = similarity_model.embed([p])
+
+        emb_responses = similarity_model.embed(responses)
+
+        sim = (emb_prompt @ emb_responses.T).mean()
+
+        prompt_scores.append(float(sim))
+
+    # --------------------------------
+    # Visualizations
+    # --------------------------------
+
     print("\nOpening similarity heatmap...\n")
 
     plot_heatmap(similarity_matrix)
+
+    print("\nOpening stability map...\n")
+
+    stability_map = StabilityMap()
+
+    stability_map.plot(prompts, prompt_scores)
 
 
 if __name__ == "__main__":
