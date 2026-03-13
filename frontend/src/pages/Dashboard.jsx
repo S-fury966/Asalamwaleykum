@@ -32,9 +32,9 @@ const Dashboard = () => {
 
   // Connect to Python Backend
   const handleAnalyze = async () => {
-    // FIX 1: Changed basePrompt to prompt
     if (!prompt.trim()) return; 
     setIsAnalyzing(true);
+    setResults(null);
     
     try {
       const response = await fetch("http://127.0.0.1:8000/analyze", {
@@ -42,7 +42,6 @@ const Dashboard = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        // FIX 2: Changed basePrompt to prompt
         body: JSON.stringify({ prompt: prompt }), 
       });
 
@@ -51,32 +50,43 @@ const Dashboard = () => {
       }
 
       const data = await response.json();
-      console.log("Success! Backend Data:", data);
+      console.log("Success! Full Backend Data:", data);
 
-      // FIX 3: Mapped keys exactly to what the HTML expects (score, status, summary)
+      // --- THE FIX: CAPTURE ALL BACKEND DATA HERE ---
       setResults({
         score: Math.round(data.metrics.final_score * 100), 
         status: data.metrics.final_interpretation || "Analyzed",
-        summary: `Analysis complete. Overall stability is ${data.metrics.final_interpretation}. Graph score: ${data.metrics.graph_score}. Hallucination assessment: ${data.metrics.hallucination_interpretation}.`,
-        matrixData: data.visualization_data.similarity_matrix 
+        summary: [
+          `Overall Stability: ${data.metrics.final_interpretation}`,
+          `Graph Score: ${data.metrics.graph_score} (Measures structural logic retention)`,
+          `Hallucination Assessment: ${data.metrics.hallucination_interpretation}`
+        ],
+        // Storing all the visualization data for the next phase
+        matrixData: data.visualization_data.similarity_matrix,
+        stabilityMapData: data.visualization_data.stability_map,
+        sensitivityCurveData: data.visualization_data.sensitivity_curve,
+        landscapeData: data.visualization_data.stability_landscape,
+        graphData: data.graph_data // Just in case you need nodes/edges later
       });
 
     } catch (error) {
       console.error("Failed to fetch:", error);
-      // Fallback UI
       setResults({
         score: 0,
         status: "Error",
-        summary: "Connection failed. Please ensure your FastAPI server is running on port 8000 and CORS is enabled."
+        summary: [
+          "Connection to backend failed.",
+          "Please ensure your FastAPI server is running on port 8000.",
+          "Verify CORS is correctly enabled in main.py."
+        ],
+        matrixData: null,
+        stabilityMapData: null,
+        sensitivityCurveData: null,
+        landscapeData: null
       });
     } finally {
       setIsAnalyzing(false);
     }
-  };
-
-  const handleReset = () => {
-    setResults(null);
-    setPrompt(''); // FIX 4: Changed setBasePrompt to setPrompt
   };
 
   return (
@@ -165,7 +175,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Results Area (Shows after analysis) */}
+            {/* Results Area */}
             {results && (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} 
@@ -179,19 +189,29 @@ const Dashboard = () => {
                     <span className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{results.score}</span>
                     <span className="text-xl text-slate-500">/100</span>
                   </div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-sm font-bold border border-emerald-500/20">
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold border ${results.status === "Error" ? 'bg-red-500/10 text-red-400 border-red-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
                     <Sparkles className="w-4 h-4" /> {results.status}
                   </div>
                 </div>
 
                 {/* Detailed Summary Card */}
                 <div className="md:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                  <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                     <Activity className="w-5 h-5 text-cyan-400" /> Detailed Summary
                   </h3>
-                  <p className="text-slate-300 leading-relaxed">
-                    {results.summary}
-                  </p>
+                  
+                  <ul className="space-y-4 text-slate-300">
+                    {Array.isArray(results.summary) ? (
+                      results.summary.map((point, index) => (
+                        <li key={index} className="flex items-start gap-3">
+                          <div className={`mt-2 w-2 h-2 rounded-full shrink-0 ${results.status === "Error" ? 'bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]' : 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]'}`} />
+                          <span className="leading-relaxed">{point}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <p>{results.summary}</p>
+                    )}
+                  </ul>
                 </div>
               </motion.div>
             )}
@@ -205,7 +225,8 @@ const Dashboard = () => {
               </h2>
               <p className="text-slate-400">Visualizes the cosine similarity between the baseline prompt and perturbed outputs.</p>
             </div>
-            <GraphPlaceholder title="Heatmap Rendering Engine Pending" />
+            {/* Pass the data to the placeholder so it knows when to light up */}
+            <GraphPlaceholder title="Similarity Heatmap" dataLoaded={!!results?.matrixData} />
           </section>
 
           {/* SECTION 3: Stability Map */}
@@ -216,7 +237,7 @@ const Dashboard = () => {
               </h2>
               <p className="text-slate-400">Maps structural logical degradation across Small, Moderate, and Huge semantic shifts.</p>
             </div>
-            <GraphPlaceholder title="Stability Map Rendering Engine Pending" />
+            <GraphPlaceholder title="Stability Map" dataLoaded={!!results?.stabilityMapData} />
           </section>
 
           {/* SECTION 4: Sensitivity Curve */}
@@ -227,7 +248,7 @@ const Dashboard = () => {
               </h2>
               <p className="text-slate-400">Tracks how rapidly the LLM hallucinates as emotional framing intensity increases.</p>
             </div>
-            <GraphPlaceholder title="Curve Rendering Engine Pending" />
+            <GraphPlaceholder title="Sensitivity Curve" dataLoaded={!!results?.sensitivityCurveData} />
           </section>
 
           {/* SECTION 5: Stability Landscape */}
@@ -238,7 +259,7 @@ const Dashboard = () => {
               </h2>
               <p className="text-slate-400">A 3D representation of prompt robustness combining semantic and emotional vectors.</p>
             </div>
-            <GraphPlaceholder title="3D Landscape Engine Pending" />
+            <GraphPlaceholder title="Stability Landscape" dataLoaded={!!results?.landscapeData} />
           </section>
 
         </div>
@@ -262,13 +283,20 @@ const SidebarLink = ({ icon, label, isActive, onClick }) => (
   </button>
 );
 
-// Helper component for Graph Placeholders
-const GraphPlaceholder = ({ title }) => (
-  <div className="w-full h-[400px] bg-[#0f172a]/50 border border-white/5 rounded-2xl flex flex-col items-center justify-center text-slate-500 relative overflow-hidden">
+// Updated Graph Placeholder to react to data
+const GraphPlaceholder = ({ title, dataLoaded }) => (
+  <div className={`w-full h-[400px] border rounded-2xl flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500 ${dataLoaded ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400' : 'bg-[#0f172a]/50 border-white/5 text-slate-500'}`}>
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_1px,transparent_1px)] [background-size:20px_20px]" />
-    <Activity className="w-12 h-12 mb-4 opacity-20" />
-    <p className="font-mono text-sm relative z-10">{title}</p>
-    <p className="text-xs mt-2 opacity-50 relative z-10">Awaiting Python Integration</p>
+    <Activity className={`w-12 h-12 mb-4 ${dataLoaded ? 'opacity-100 text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]' : 'opacity-20'}`} />
+    <p className={`font-mono text-sm relative z-10 ${dataLoaded ? 'text-white font-bold' : ''}`}>{title}</p>
+    
+    {dataLoaded ? (
+      <p className="text-xs mt-3 relative z-10 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" /> Data successfully loaded from backend
+      </p>
+    ) : (
+      <p className="text-xs mt-2 opacity-50 relative z-10">Awaiting Graph Rendering</p>
+    )}
   </div>
 );
 
