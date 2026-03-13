@@ -99,6 +99,81 @@ class SectionErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+// ─── Safe Plotly wrapper for Stability Map (Scatterplot) ──────────────
+// ─── Safe Plotly wrapper for Stability Map (Scatterplot) ──────────────
+const PlotlyStabilityMap = ({ data }) => {
+  const containerRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !data) return;
+    let cancelled = false;
+
+    import('plotly.js-dist-min')
+      .then((module) => {
+        if (cancelled || !containerRef.current) return;
+        const Plotly = module.default || module;
+
+        const yData = Array.isArray(data) ? data : data.scores || data.y || []; 
+        const xData = Array.from({ length: yData.length }, (_, i) => `P${i + 1}`);
+
+        Plotly.newPlot(
+          containerRef.current,
+          [{
+            x: xData,
+            y: yData,
+            type: 'scatter',
+            // ─── CHANGE 1: Enable markers ONLY to make it a scatterplot ───
+            mode: 'markers', 
+            // ─── CHANGE 2: Define dynamic color mapping ───
+            marker: { 
+              size: 16, // Keep the dots large like your current graph
+              color: yData, // CRITICAL: Bind point color to the data (scores)!
+              colorscale: 'Plasma', // Closer match to your target yellow-purple gradient!
+              showscale: true, // THIS displays the gradient scale (colorbar) legend
+              line: { width: 2, color: '#020617' } 
+            },
+            // Removed: lines, fill property, and fillcolor to remove the purple area
+          }],
+          {
+            autosize: true,
+            margin: { t: 20, l: 40, r: 20, b: 40 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#94a3b8' },
+            xaxis: { title: 'Perturbed Prompts', gridcolor: '#1e293b' },
+            yaxis: { title: 'Stability Score', gridcolor: '#1e293b' }
+          },
+          { responsive: true, displayModeBar: false }
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      });
+
+    return () => {
+      cancelled = true;
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
+    };
+  }, [data]);
+
+  if (error) {
+    return (
+      <div className="w-full h-[400px] border border-red-500/30 rounded-2xl bg-red-950/20 flex items-center justify-center">
+        <p className="text-red-400 font-mono text-sm">Plotly error: {error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-[400px] border border-white/10 rounded-2xl bg-[#0f172a]/50 overflow-hidden shadow-lg"
+    />
+  );
+};
 // ──────────────────────────────────────────────────────────────────────────
 
 const Dashboard = () => {
@@ -156,7 +231,7 @@ const Dashboard = () => {
         prompts: data.perturbed_prompts,
         responses: data.responses,
         matrixData: safeMatrix.length > 0 ? safeMatrix : null,
-        stabilityMapData: null,
+        stabilityMapData: data.visualization_data?.prompt_scores || null,
         sensitivityCurveData: null,
         landscapeData: null,
       });
@@ -372,9 +447,17 @@ const Dashboard = () => {
               </h2>
               <p className="text-slate-400">Maps structural logical degradation across Small, Moderate, and Huge semantic shifts.</p>
             </div>
-            <GraphPlaceholder title="Stability Map" dataLoaded={!!results?.stabilityMapData} />
-          </section>
+            
+            {/* NEW CODE HERE */}
+            {results?.stabilityMapData ? (
+              <SectionErrorBoundary>
+                <PlotlyStabilityMap data={results.stabilityMapData} />
+              </SectionErrorBoundary>
+            ) : (
+              <GraphPlaceholder title="Stability Map" dataLoaded={false} />
+            )}
 
+          </section>
           {/* SECTION 4: Sensitivity Curve */}
           <section id="sensitivity" className="scroll-mt-12 space-y-6">
             <div>
