@@ -1,7 +1,9 @@
+import time
 from perturbations.paraphrase import paraphrase
 from perturbations.emotional import emotional
 from perturbations.structural import structural
 from perturbations.logical_flip import logical_flip
+from perturbations.reasoning import reasoning
 
 # Keep your helper functions
 def interpret_score(score):
@@ -26,6 +28,8 @@ def run_stability_analysis(
     confidence_estimator, 
     stability_analyzer
 ):
+    start_time = time.time()
+
     """
     Runs the full LLM stability pipeline for a given prompt and returns a dictionary of results.
     """
@@ -36,7 +40,8 @@ def run_stability_analysis(
     prompts.extend(emotional(prompt))
     prompts.extend(structural(prompt))
     prompts.extend(logical_flip(prompt))
-    prompts = list(set(prompts))[:3]
+    prompts.extend(reasoning(prompt))
+    prompts = list(set(prompts))[:2]
 
     # 2. LLM Generation
     responses = []
@@ -67,8 +72,12 @@ def run_stability_analysis(
         sim = (emb_prompt @ emb_responses.T).mean()
         prompt_scores.append(float(sim))
 
+    end_time = time.time() # 3. END THE TIMER HERE
+    execution_time = round(end_time - start_time, 2)
+
     # 7. Package everything into a dictionary to send back to the React frontend
     return {
+        "execution_time": execution_time,
         "original_prompt": prompt,
         "perturbed_prompts": prompts,
         "responses": responses,

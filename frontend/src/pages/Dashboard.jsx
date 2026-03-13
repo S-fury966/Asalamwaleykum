@@ -61,6 +61,11 @@ const Dashboard = () => {
           `Graph Score: ${data.metrics.graph_score} (Measures structural logic retention)`,
           `Hallucination Assessment: ${data.metrics.hallucination_interpretation}`
         ],
+
+        executionTime: data.execution_time,
+        prompts: data.perturbed_prompts,
+        responses: data.responses,
+
         // Storing all the visualization data for the next phase
         matrixData: data.visualization_data.similarity_matrix,
         stabilityMapData: data.visualization_data.stability_map,
@@ -196,8 +201,16 @@ const Dashboard = () => {
 
                 {/* Detailed Summary Card */}
                 <div className="md:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
-                  <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-cyan-400" /> Detailed Summary
+                  <h3 className="text-lg font-bold text-white mb-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-cyan-400" /> Detailed Summary
+                    </div>
+                    {/* LATENCY BADGE */}
+                    {results.executionTime && (
+                      <span className="text-xs font-mono bg-[#020617] text-slate-400 px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5">
+                        <Activity className="w-3 h-3 text-emerald-400" /> {results.executionTime}s
+                      </span>
+                    )}
                   </h3>
                   
                   <ul className="space-y-4 text-slate-300">
@@ -215,6 +228,39 @@ const Dashboard = () => {
                 </div>
               </motion.div>
             )}
+
+            {/* RESPONSE VIEWER (Placed right below the summary cards) */}
+            {results && results.prompts && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md mt-6"
+              >
+                <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" /> Pipeline Response Viewer
+                </h3>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {results.prompts.map((p, idx) => (
+                    <div key={idx} className="bg-[#020617]/50 border border-white/5 rounded-xl p-5">
+                      <div className="mb-3">
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider bg-cyan-500/10 px-2 py-1 rounded">
+                          Perturbation {idx + 1}
+                        </span>
+                        <p className="text-sm text-slate-200 mt-3 font-medium">{p}</p>
+                      </div>
+                      <div className="pt-3 border-t border-white/5">
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider bg-emerald-500/10 px-2 py-1 rounded">
+                          TinyLlama Output
+                        </span>
+                        <p className="text-sm text-slate-400 mt-3 leading-relaxed italic">
+                          "{results.responses[idx]}"
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
           </section>
 
           {/* SECTION 2: Similarity Heatmap */}
