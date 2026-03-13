@@ -15,9 +15,6 @@ import {
 } from 'lucide-react';
 
 // ─── Safe Plotly wrapper ───────────────────────────────────────────────────
-// react-plotly.js can return an object (not a component) depending on the
-// bundler / version, which causes the "element type is invalid" crash.
-// We dynamically import Plotly and render it ourselves to avoid this entirely.
 const PlotlyHeatmap = ({ matrixData }) => {
   const containerRef = useRef(null);
   const [error, setError] = useState(null);
@@ -27,10 +24,15 @@ const PlotlyHeatmap = ({ matrixData }) => {
     let cancelled = false;
 
     import('plotly.js-dist-min')
-      .then((Plotly) => {
+      .then((module) => {
         if (cancelled || !containerRef.current) return;
+        
+        // FIX 1: Extract the default object if Vite wrapped it
+        const Plotly = module.default || module;
+        
         const n = matrixData.length;
         const labels = Array.from({ length: n }, (_, i) => `P${i + 1}`);
+        
         Plotly.newPlot(
           containerRef.current,
           [{
@@ -38,7 +40,7 @@ const PlotlyHeatmap = ({ matrixData }) => {
             x: labels,
             y: labels,
             type: 'heatmap',
-            colorscale: 'Viridis',
+            colorscale: 'RdBu',
             showscale: true,
           }],
           {
@@ -57,10 +59,11 @@ const PlotlyHeatmap = ({ matrixData }) => {
 
     return () => {
       cancelled = true;
-      // Clean up Plotly instance on unmount
-      import('plotly.js-dist-min').then((Plotly) => {
-        if (containerRef.current) Plotly.purge(containerRef.current);
-      });
+      // FIX 2: Synchronously clear the container to prevent Strict Mode 
+      // from asynchronously deleting the chart on the next render pass.
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '';
+      }
     };
   }, [matrixData]);
 
