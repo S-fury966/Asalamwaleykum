@@ -49,6 +49,8 @@ const PlotlyHeatmap = ({ matrixData }) => {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#94a3b8' },
+            xaxis: { title: { text: 'Perturbed Prompts', font: { size: 12, color: '#cbd5e1' } } },
+            yaxis: { title: { text: 'Perturbed Prompts', font: { size: 12, color: '#cbd5e1' } } }
           },
           { responsive: true, displayModeBar: false }
         );
@@ -141,8 +143,8 @@ const PlotlyStabilityMap = ({ data }) => {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#94a3b8' },
-            xaxis: { title: 'Perturbed Prompts', gridcolor: '#1e293b' },
-            yaxis: { title: 'Stability Score', gridcolor: '#1e293b' }
+            xaxis: { title: { text: 'Perturbed Prompts', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b' },
+            yaxis: { title: { text: 'Stability Score', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b' }
           },
           { responsive: true, displayModeBar: false }
         );
@@ -210,8 +212,8 @@ const PlotlySensitivityCurve = ({ data }) => {
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#94a3b8' },
-            xaxis: { title: 'Perturbed Prompts', gridcolor: '#1e293b' },
-            yaxis: { title: 'Degradation Variance', gridcolor: '#1e293b' }
+            xaxis: { title: { text: 'Perturbed Prompts', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b' },
+            yaxis: { title: { text: 'Degradation Variance', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b' }
           },
           { responsive: true, displayModeBar: false }
         );
@@ -281,10 +283,10 @@ const PlotlyStabilityLandscape = ({ zData }) => {
             plot_bgcolor: 'rgba(0,0,0,0)',
             font: { color: '#94a3b8' },
             scene: {
-              xaxis: { title: 'Semantic Shift', gridcolor: '#1e293b', backgroundcolor: 'rgba(0,0,0,0)' },
-              yaxis: { title: 'Structural Shift', gridcolor: '#1e293b', backgroundcolor: 'rgba(0,0,0,0)' },
-              zaxis: { title: 'Stability', gridcolor: '#1e293b', backgroundcolor: 'rgba(0,0,0,0)' },
-              camera: { eye: { x: 1.5, y: 1.5, z: 1.2 } } // Sets the perfect default rotation
+              xaxis: { title: { text: 'Semantic Shift', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b', backgroundcolor: 'rgba(0,0,0,0)' },
+              yaxis: { title: { text: 'Structural Shift', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b', backgroundcolor: 'rgba(0,0,0,0)' },
+              zaxis: { title: { text: 'Stability', font: { size: 12, color: '#cbd5e1' } }, gridcolor: '#1e293b', backgroundcolor: 'rgba(0,0,0,0)' },
+              camera: { eye: { x: 1.5, y: 1.5, z: 1.2 } }
             }
           },
           { responsive: true, displayModeBar: false }
