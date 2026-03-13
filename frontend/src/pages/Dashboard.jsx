@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -13,6 +13,90 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
+
+// ─── Safe Plotly wrapper ───────────────────────────────────────────────────
+// react-plotly.js can return an object (not a component) depending on the
+// bundler / version, which causes the "element type is invalid" crash.
+// We dynamically import Plotly and render it ourselves to avoid this entirely.
+const PlotlyHeatmap = ({ matrixData }) => {
+  const containerRef = useRef(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !matrixData) return;
+    let cancelled = false;
+
+    import('plotly.js-dist-min')
+      .then((Plotly) => {
+        if (cancelled || !containerRef.current) return;
+        const n = matrixData.length;
+        const labels = Array.from({ length: n }, (_, i) => `P${i + 1}`);
+        Plotly.newPlot(
+          containerRef.current,
+          [{
+            z: matrixData,
+            x: labels,
+            y: labels,
+            type: 'heatmap',
+            colorscale: 'Viridis',
+            showscale: true,
+          }],
+          {
+            autosize: true,
+            margin: { t: 20, l: 40, r: 20, b: 40 },
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#94a3b8' },
+          },
+          { responsive: true, displayModeBar: false }
+        );
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
+      });
+
+    return () => {
+      cancelled = true;
+      // Clean up Plotly instance on unmount
+      import('plotly.js-dist-min').then((Plotly) => {
+        if (containerRef.current) Plotly.purge(containerRef.current);
+      });
+    };
+  }, [matrixData]);
+
+  if (error) {
+    return (
+      <div className="w-full h-[450px] border border-red-500/30 rounded-2xl bg-red-950/20 flex items-center justify-center">
+        <p className="text-red-400 font-mono text-sm">Plotly error: {error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="w-full h-[450px] border border-white/10 rounded-2xl bg-[#0f172a]/50 overflow-hidden shadow-lg"
+    />
+  );
+};
+
+// ─── Error Boundary ────────────────────────────────────────────────────────
+class SectionErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, message: '' }; }
+  static getDerivedStateFromError(err) { return { hasError: true, message: err.message }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-[200px] border border-red-500/30 rounded-2xl bg-red-950/20 flex flex-col items-center justify-center gap-2 p-6">
+          <p className="text-red-400 font-bold">Render error in this section</p>
+          <p className="text-red-300/70 font-mono text-xs text-center">{this.state.message}</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -52,7 +136,11 @@ const Dashboard = () => {
       const data = await response.json();
       console.log("Success! Full Backend Data:", data);
 
-      // --- THE FIX: CAPTURE ALL BACKEND DATA HERE ---
+      const rawMatrix = data.visualization_data?.similarity_matrix;
+      const safeMatrix = Array.isArray(rawMatrix)
+        ? rawMatrix.map(row => Array.isArray(row) ? row.map(Number) : [])
+        : [];
+
       setResults({
         score: Math.round(data.metrics.final_score * 100), 
         status: data.metrics.final_interpretation || "Analyzed",
@@ -61,17 +149,13 @@ const Dashboard = () => {
           `Graph Score: ${data.metrics.graph_score} (Measures structural logic retention)`,
           `Hallucination Assessment: ${data.metrics.hallucination_interpretation}`
         ],
-
         executionTime: data.execution_time,
         prompts: data.perturbed_prompts,
         responses: data.responses,
-
-        // Storing all the visualization data for the next phase
-        matrixData: data.visualization_data.similarity_matrix,
-        stabilityMapData: data.visualization_data.stability_map,
-        sensitivityCurveData: data.visualization_data.sensitivity_curve,
-        landscapeData: data.visualization_data.stability_landscape,
-        graphData: data.graph_data // Just in case you need nodes/edges later
+        matrixData: safeMatrix.length > 0 ? safeMatrix : null,
+        stabilityMapData: null,
+        sensitivityCurveData: null,
+        landscapeData: null,
       });
 
     } catch (error) {
@@ -267,8 +351,14 @@ const Dashboard = () => {
               </h2>
               <p className="text-slate-400">Visualizes the cosine similarity between the baseline prompt and perturbed outputs.</p>
             </div>
-            {/* Pass the data to the placeholder so it knows when to light up */}
-            <GraphPlaceholder title="Similarity Heatmap" dataLoaded={!!results?.matrixData} />
+            
+            {results?.matrixData ? (
+              <SectionErrorBoundary>
+                <PlotlyHeatmap matrixData={results.matrixData} />
+              </SectionErrorBoundary>
+            ) : (
+              <GraphPlaceholder title="Similarity Heatmap" dataLoaded={false} />
+            )}
           </section>
 
           {/* SECTION 3: Stability Map */}
