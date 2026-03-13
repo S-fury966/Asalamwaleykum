@@ -36,7 +36,7 @@ def run_stability_analysis(
     prompts.extend(emotional(prompt))
     prompts.extend(structural(prompt))
     prompts.extend(logical_flip(prompt))
-    prompts = list(set(prompts))[:8]
+    prompts = list(set(prompts))[:3]
 
     # 2. LLM Generation
     responses = []
